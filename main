@@ -1,0 +1,270 @@
+-- Crea la GUI
+local ScreenGui = Instance.new("ScreenGui")
+local Frame = Instance.new("Frame")
+local TargetTextBox = Instance.new("TextBox")
+local LookButton = Instance.new("TextButton")
+local FollowButton = Instance.new("TextButton")
+local WaypointTextBox = Instance.new("TextBox")
+local AddWaypointButton = Instance.new("TextButton")
+local CoordList = Instance.new("ScrollingFrame")
+
+-- Configura ScreenGui
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+-- Configura Frame
+Frame.Parent = ScreenGui
+Frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Frame.Size = UDim2.new(0, 300, 0, 450)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -225)
+Frame.Active = true
+Frame.Draggable = true
+
+-- Configura TargetTextBox
+TargetTextBox.Parent = Frame
+TargetTextBox.Size = UDim2.new(0, 280, 0, 30)
+TargetTextBox.Position = UDim2.new(0, 10, 0, 10)
+TargetTextBox.PlaceholderText = "Target (nome giocatore)"
+
+-- Configura LookButton
+LookButton.Parent = Frame
+LookButton.Size = UDim2.new(0, 130, 0, 30)
+LookButton.Position = UDim2.new(0, 10, 0, 50)
+LookButton.Text = "Osserva"
+
+-- Configura FollowButton
+FollowButton.Parent = Frame
+FollowButton.Size = UDim2.new(0, 130, 0, 30)
+FollowButton.Position = UDim2.new(0, 150, 0, 50)
+FollowButton.Text = "Segui"
+
+-- Configura WaypointTextBox
+WaypointTextBox.Parent = Frame
+WaypointTextBox.Size = UDim2.new(0, 130, 0, 30)
+WaypointTextBox.Position = UDim2.new(0, 10, 0, 90)
+WaypointTextBox.PlaceholderText = "Nome waypoint"
+
+-- Configura AddWaypointButton
+AddWaypointButton.Parent = Frame
+AddWaypointButton.Size = UDim2.new(0, 130, 0, 30)
+AddWaypointButton.Position = UDim2.new(0, 150, 0, 90)
+AddWaypointButton.Text = "Aggiungi Waypoint"
+
+-- Configura CoordList (list di waypoint)
+CoordList.Parent = Frame
+CoordList.Size = UDim2.new(0, 280, 0, 200)
+CoordList.Position = UDim2.new(0, 10, 0, 130)
+CoordList.CanvasSize = UDim2.new(0, 0, 3, 0)
+CoordList.ScrollBarThickness = 10
+CoordList.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+
+-- Variabili di stato
+local savedCoordinates = {}
+local isFollowing = false
+local isLocked = false
+local currentTarget = nil
+local isLooking = false  -- Variabile per tenere traccia dello stato di osservazione
+
+-- Funzione per osservare un giocatore
+local function lookAtPlayer(playerName)
+    local localPlayer = game.Players.LocalPlayer
+    local targetPlayer = game.Players:FindFirstChild(playerName)
+
+    if targetPlayer and targetPlayer.Character then
+        local camera = game.Workspace.CurrentCamera
+        camera.CameraSubject = targetPlayer.Character.Humanoid
+    else
+        warn("Giocatore non trovato!")
+    end
+end
+
+-- Funzione per seguire un giocatore
+local function followPlayer(playerName)
+    local localPlayer = game.Players.LocalPlayer
+    local targetPlayer = game.Players:FindFirstChild(playerName)
+
+    if targetPlayer and targetPlayer.Character then
+        isFollowing = true
+        currentTarget = targetPlayer
+
+        spawn(function()
+            local movements = {
+                Vector3.new(5, 0, 0),  -- Destra
+                Vector3.new(-5, 0, 0), -- Sinistra
+                Vector3.new(0, 5, 0),  -- Sopra
+                Vector3.new(0, -5, 0), -- Sotto
+                Vector3.new(0, 0, 5),  -- Avanti
+                Vector3.new(0, 0, -5)  -- Dietro
+            }
+
+            local index = 1
+            while isFollowing and currentTarget do
+                if not currentTarget.Character or not localPlayer.Character then
+                    isFollowing = false
+                    break
+                end
+
+                local targetPosition = currentTarget.Character.PrimaryPart.Position
+                local offset = movements[index]
+                localPlayer.Character:MoveTo(targetPosition + offset)
+                index = index % #movements + 1 -- Ruota tra i movimenti
+                wait(0.1)
+            end
+        end)
+    else
+        warn("Giocatore non trovato!")
+    end
+end
+
+-- Funzione per bloccare la visuale su un giocatore
+local function lockOnPlayer(playerName)
+    local localPlayer = game.Players.LocalPlayer
+    local targetPlayer = game.Players:FindFirstChild(playerName)
+
+    if targetPlayer and targetPlayer.Character then
+        isLocked = true
+        currentTarget = targetPlayer
+
+        local camera = game.Workspace.CurrentCamera
+        camera.CameraSubject = targetPlayer.Character.Humanoid
+    else
+        warn("Giocatore non trovato!")
+    end
+end
+
+-- Funzione per salvare un waypoint
+local function saveWaypoint()
+    local checkpointName = WaypointTextBox.Text
+    if checkpointName == "" then
+        warn("Inserire un nome per il checkpoint!")
+        return
+    end
+
+    local character = game.Players.LocalPlayer.Character
+    if character and character.PrimaryPart then
+        local position = character.PrimaryPart.Position
+        if savedCoordinates[checkpointName] then
+            warn("Il nome del checkpoint esiste già!")
+            return
+        end
+
+        savedCoordinates[checkpointName] = position
+
+        -- Crea un button per il waypoint
+        local checkpointButton = Instance.new("TextButton")
+        checkpointButton.Text = checkpointName
+        checkpointButton.Size = UDim2.new(0, 230, 0, 30)
+        checkpointButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+        checkpointButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        checkpointButton.Parent = CoordList
+        checkpointButton.Position = UDim2.new(0, 0, 0, (#CoordList:GetChildren() - 1) * 35)  -- Aggiunge il waypoint sopra gli altri
+
+        -- Crea un pulsante "X" per eliminare il waypoint
+        local deleteButton = Instance.new("TextButton")
+        deleteButton.Text = "X"
+        deleteButton.Size = UDim2.new(0, 30, 0, 30)
+        deleteButton.Position = UDim2.new(0, 240, 0, 0)  -- Posiziona la "X" accanto al waypoint
+        deleteButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+        deleteButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        deleteButton.Parent = checkpointButton
+
+        -- Funzione per eliminare il waypoint
+        deleteButton.MouseButton1Click:Connect(function()
+            savedCoordinates[checkpointName] = nil
+            checkpointButton:Destroy()
+        end)
+
+        -- Funzione per teletrasportarsi al waypoint
+        checkpointButton.MouseButton1Click:Connect(function()
+            game.Players.LocalPlayer.Character:SetPrimaryPartCFrame(CFrame.new(position))
+        end)
+    else
+        warn("Impossibile ottenere la posizione del personaggio!")
+    end
+end
+
+-- Collegamenti dei pulsanti
+LookButton.MouseButton1Click:Connect(function()
+    local playerName = TargetTextBox.Text
+    if isLooking then
+        -- Disattiva l'osservazione
+        local camera = game.Workspace.CurrentCamera
+        camera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+        isLooking = false
+        LookButton.Text = "Osserva"  -- Cambia il testo del pulsante per riflettere lo stato
+    else
+        -- Attiva l'osservazione
+        lookAtPlayer(playerName)
+        isLooking = true
+        LookButton.Text = "Interrompi Osservazione"  -- Cambia il testo del pulsante
+    end
+end)
+
+FollowButton.MouseButton1Click:Connect(function()
+    if isFollowing then
+        isFollowing = false
+    else
+        local playerName = TargetTextBox.Text
+        followPlayer(playerName)
+    end
+end)
+
+AddWaypointButton.MouseButton1Click:Connect(saveWaypoint)
+
+-- Funzioni per attivare tramite tasti
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.KeyCode == Enum.KeyCode.Z then
+        local playerName = TargetTextBox.Text
+        if not isFollowing then
+            followPlayer(playerName)
+        else
+            isFollowing = false
+        end
+    elseif input.KeyCode == Enum.KeyCode.B then
+        local playerName = TargetTextBox.Text
+        if not isLooking then
+            lookAtPlayer(playerName)
+        else
+            local camera = game.Workspace.CurrentCamera
+            camera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+            isLooking = false
+            LookButton.Text = "Osserva"  -- Cambia il testo del pulsante
+        end
+    end
+end)
+
+-- Funzione per trovare il giocatore con il nome reale più simile
+local function findClosestPlayer(partialName)
+    local closestPlayer = nil
+    local closestDistance = math.huge -- Usa un valore molto alto inizialmente
+
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        local playerName = player.Name:lower()
+        local partialNameLower = partialName:lower()
+
+        -- Verifica se il nome parziale è contenuto nel nome reale
+        local distance = string.find(playerName, partialNameLower)
+        if distance and distance < closestDistance then
+            closestPlayer = player
+            closestDistance = distance
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Collegamento al TargetTextBox per completamento automatico
+TargetTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local partialName = TargetTextBox.Text
+        local closestPlayer = findClosestPlayer(partialName)
+
+        if closestPlayer then
+            -- Aggiorna il TargetTextBox con il nome reale più vicino
+            TargetTextBox.Text = closestPlayer.Name
+        else
+            warn("Nessun giocatore trovato con quel nome!")
+        end
+    end
+end)

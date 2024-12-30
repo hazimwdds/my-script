@@ -1,0 +1,531 @@
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local runService = game:GetService("RunService")
+local userInputService = game:GetService("UserInputService")
+local whitelistTextBox = Instance.new("TextBox")
+local buttonAddWhitelist = Instance.new("TextButton")
+local buttonRemoveWhitelist = Instance.new("TextButton")
+local buttonGoto = Instance.new("TextButton")
+local gui = Instance.new("ScreenGui")
+gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+-- Variabili
+local target
+local highlight = nil
+local highlights = {} -- Per gestire gli highlights globali
+local guiVisible = true  -- Variabile per tenere traccia dello stato di visibilità della GUI
+local whitelist = {}
+-- GUI Unificata
+gui.Name = "Aim Assist GUI"
+
+local mainFrame = Instance.new("Frame")
+local buttonLock = Instance.new("TextButton")
+local buttonDisable = Instance.new("TextButton")
+local buttonESP = Instance.new("TextButton")
+local buttonHighlight = Instance.new("TextButton") -- Pulsante per Highlight globale
+local notification = Instance.new("TextLabel")
+
+-- Configura la frame principale
+mainFrame.Size = UDim2.new(0, 300, 0, 260)
+mainFrame.Position = UDim2.new(0, 10, 0, 10)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+
+-- Aggiungi la sfumatura viola allo sfondo
+local gradient = Instance.new("UIGradient")
+gradient.Parent = mainFrame
+gradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(102, 51, 153)),  -- Viola scuro (simile ai bottoni)
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(142, 68, 173))   -- Viola chiaro
+}
+gradient.Rotation = 45  -- Imposta l'angolo della sfumatura per un effetto diagonale
+
+-- Funzione per creare un pulsante con effetti grafici e sfumatura
+local function setupButton(button, text, position)
+    button.Size = UDim2.new(0, 150, 0, 50)
+    button.Position = position
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 18
+    button.BackgroundColor3 = Color3.fromRGB(102, 51, 153)  -- Colore viola scuro
+    button.Parent = mainFrame
+
+    -- Aggiungi sfumatura di background
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new(Color3.fromRGB(102, 51, 153), Color3.fromRGB(142, 68, 173))  -- Sfumatura da viola scuro a chiaro
+    gradient.Parent = button
+
+    -- Angoli arrotondati
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = button
+
+    -- Cambia il colore al passaggio del mouse
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(142, 68, 173)  -- Colore più chiaro
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(102, 51, 153)
+    end)
+end
+
+
+
+whitelistTextBox.Size = UDim2.new(0, 200, 0, 40)
+whitelistTextBox.Position = UDim2.new(0, 10, 0, 250)
+whitelistTextBox.PlaceholderText = "Inserisci il nome del target"
+whitelistTextBox.Text = ""
+whitelistTextBox.TextColor3 = Color3.fromRGB(0, 0, 0)
+whitelistTextBox.Font = Enum.Font.Gotham
+whitelistTextBox.TextSize = 16
+whitelistTextBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+whitelistTextBox.Parent = mainFrame
+
+-- Aggiunta per l'autocompletamento
+local suggestionLabel = Instance.new("TextLabel")
+suggestionLabel.Size = whitelistTextBox.Size
+suggestionLabel.Position = whitelistTextBox.Position
+suggestionLabel.TextColor3 = Color3.fromRGB(150, 150, 150) -- Colore grigio per il suggerimento
+suggestionLabel.Font = Enum.Font.Gotham
+suggestionLabel.TextSize = 16
+suggestionLabel.BackgroundTransparency = 1
+suggestionLabel.TextXAlignment = Enum.TextXAlignment.Left
+suggestionLabel.Parent = mainFrame
+
+setupButton(buttonLock, "Aggancia", UDim2.new(0, 10, 0, 10))
+setupButton(buttonDisable, "Disattiva gancio", UDim2.new(0, 10, 0, 70))
+setupButton(buttonESP, "Attiva ESP", UDim2.new(0, 10, 0, 130))
+setupButton(buttonHighlight, "Highlight Globale", UDim2.new(0, 10, 0, 190))
+setupButton(buttonAddWhitelist, "Aggiungi Whitelist", UDim2.new(0, 10, 0, 300))
+setupButton(buttonRemoveWhitelist, "Rimuovi Whitelist", UDim2.new(0, 10, 0, 360))
+setupButton(buttonGoto, "Goto", UDim2.new(0, 10, 0, 420))
+-- Configura la notifica
+notification.Size = UDim2.new(0, 300, 0, 50)
+notification.Position = UDim2.new(0.5, -150, 0, 10)
+notification.BackgroundTransparency = 0.5
+notification.Text = ""
+notification.Visible = false
+notification.Parent = gui
+
+-- Mostra notifiche
+local function showNotification(message)
+    notification.Text = message
+    notification.Visible = true
+    task.wait(2)
+    notification.Visible = false
+end
+
+-- Funzione per verificare se il bersaglio è valido
+local function isTargetValid(target)
+    if not target or not target:FindFirstChild("Humanoid") then
+        return false -- Nessun bersaglio valido
+    end
+
+    local humanoid = target:FindFirstChild("Humanoid")
+
+    -- Controlla se il bersaglio è vivo
+    if humanoid.Health <= 0 then
+        return false
+    end
+
+    -- Controlla se è knockato
+    if target:FindFirstChild("BodyEffects") and target.BodyEffects:FindFirstChild("K.O") then
+        local knockedValue = target.BodyEffects["K.O"]
+        if knockedValue.Value == true then
+            return false -- Il bersaglio è knockato
+        end
+    end
+
+    -- Controlla se è grabbed
+    if target:FindFirstChild("Grab") then
+        return false -- Il bersaglio è grabato
+    end
+
+    return true -- Il bersaglio è valido
+end
+
+-- Funzione per verificare se il bersaglio è valido
+local function isTargetValid(target)
+    if not target or not target:FindFirstChild("Humanoid") then
+        return false -- Nessun bersaglio valido
+    end
+
+    local humanoid = target:FindFirstChild("Humanoid")
+
+    -- Controlla se il bersaglio è vivo
+    if humanoid.Health <= 0 then
+        return false
+    end
+
+    -- Controlla se è knockato
+    if target:FindFirstChild("BodyEffects") and target.BodyEffects:FindFirstChild("K.O") then
+        local knockedValue = target.BodyEffects["K.O"]
+        if knockedValue.Value == true then
+            return false -- Il bersaglio è knockato
+        end
+    end
+
+    -- Controlla se è grabbed
+    if target:FindFirstChild("Grab") then
+        return false -- Il bersaglio è grabato
+    end
+
+    return true -- Il bersaglio è valido
+end
+
+-- Funzione per calcolare la posizione predetta
+local function predictPosition(target, predictionTime)
+    if not target or not target:FindFirstChild("HumanoidRootPart") then
+        return nil
+    end
+
+    local rootPart = target:FindFirstChild("HumanoidRootPart")
+    local velocity = rootPart.Velocity -- Ottieni la velocità attuale del target
+    local predictedPosition = rootPart.Position + (velocity * predictionTime)
+    return predictedPosition
+end
+
+-- Modifica funzione per bloccare il target con prediction
+local function findClosestTarget()
+    local closestPlayer = nil
+    local closestDistance = math.huge
+    local textboxTarget = whitelistTextBox.Text
+    local predictionTime = 1 -- Tempo di prediction in secondi
+
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") and otherPlayer ~= player then
+            if textboxTarget ~= "" then
+                if otherPlayer.Name == textboxTarget then
+                    if isTargetValid(otherPlayer.Character) then
+                        return otherPlayer.Character
+                    end
+                end
+            elseif not table.find(whitelist, otherPlayer.Name) then
+                local predictedPosition = predictPosition(otherPlayer.Character, predictionTime)
+                local distance = (predictedPosition - player.Character.HumanoidRootPart.Position).Magnitude
+                if distance < closestDistance and isTargetValid(otherPlayer.Character) then
+                    closestDistance = distance
+                    closestPlayer = otherPlayer
+                end
+            end
+        end
+    end
+
+    if closestPlayer then
+        return closestPlayer.Character
+    else
+        return nil
+    end
+end
+
+
+-- Aggiungi a whitelist
+buttonAddWhitelist.MouseButton1Click:Connect(function()
+    local name = whitelistTextBox.Text
+    if name and name ~= "" then
+        table.insert(whitelist, name)
+        showNotification(name .. " aggiunto alla whitelist.")
+    else
+        showNotification("Inserisci un nome valido.")
+    end
+end)
+
+-- Rimuovi da whitelist
+buttonRemoveWhitelist.MouseButton1Click:Connect(function()
+    local name = whitelistTextBox.Text
+    for i, v in ipairs(whitelist) do
+        if v == name then
+            table.remove(whitelist, i)
+            showNotification(name .. " rimosso dalla whitelist.")
+            return
+        end
+    end
+    showNotification(name .. " non trovato nella whitelist.")
+end)
+
+-- Funzione per trovare il completamento automatico
+local function getAutoComplete(input)
+    input = input:lower()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Name:lower():sub(1, #input) == input then
+            return player.Name
+        end
+    end
+    return nil
+end
+
+-- Evento per aggiornare il suggerimento
+whitelistTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+    local input = whitelistTextBox.Text
+    if input ~= "" then
+        local suggestion = getAutoComplete(input)
+        if suggestion then
+            suggestionLabel.Text = suggestion
+        else
+            suggestionLabel.Text = ""
+        end
+    else
+        suggestionLabel.Text = ""
+    end
+end)
+
+-- Evento per applicare il suggerimento quando premi Invio
+whitelistTextBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed and suggestionLabel.Text ~= "" then
+        whitelistTextBox.Text = suggestionLabel.Text
+        suggestionLabel.Text = ""
+    end
+end)
+
+-- Attiva ESP dettagliato
+local function activateESP(character)
+    if highlight then highlight:Destroy() end
+    highlight = Instance.new("Highlight")
+    highlight.Adornee = character
+    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+    highlight.Parent = character
+end
+
+-- Attiva Highlight globale con nome
+local function activateGlobalHighlight()
+    -- Rimuove tutti gli highlight esistenti
+    for _, hl in pairs(highlights) do
+        hl.Highlight:Destroy()
+        if hl.Billboard then
+            hl.Billboard:Destroy()
+        end
+    end
+    table.clear(highlights)
+
+    -- Crea nuovi highlight per ogni giocatore
+    for _, otherPlayer in pairs(game.Players:GetPlayers()) do
+        if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            -- Crea l'Highlight
+            local hl = Instance.new("Highlight")
+            hl.Adornee = otherPlayer.Character
+            if target and otherPlayer.Character == target then
+                hl.FillColor = Color3.fromRGB(0, 255, 0) -- Verde per il target
+            else
+                hl.FillColor = Color3.fromRGB(255, 0, 0) -- Rosso per gli altri
+            end
+            hl.FillTransparency = 0.5
+            hl.OutlineColor = hl.FillColor
+            hl.Parent = otherPlayer.Character
+
+            -- Crea il BillboardGui per mostrare il nome
+            local billboard = Instance.new("BillboardGui")
+            billboard.Adornee = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+            billboard.Size = UDim2.new(0, 200, 0, 50)
+            billboard.StudsOffset = Vector3.new(0, 3, 0) -- Posizione sopra la testa
+            billboard.AlwaysOnTop = true
+
+            -- Crea il TextLabel per il nome
+            local nameLabel = Instance.new("TextLabel")
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255) -- Colore bianco
+            nameLabel.Font = Enum.Font.GothamBold
+            nameLabel.TextSize = 14
+            nameLabel.Text = otherPlayer.DisplayName or otherPlayer.Name -- Mostra il DisplayName se disponibile
+            nameLabel.Parent = billboard
+            billboard.Parent = otherPlayer.Character
+
+            -- Aggiungi l'Highlight e il Billboard alla tabella
+            table.insert(highlights, { Highlight = hl, Billboard = billboard })
+        end
+    end
+end
+
+
+local function deactivateGlobalHighlight()
+    for _, hl in pairs(highlights) do
+        hl.Highlight:Destroy()
+        if hl.Billboard then
+            hl.Billboard:Destroy()
+        end
+    end
+    table.clear(highlights)
+end
+
+-- Aggiorna Highlight globale al cambio target
+local function updateGlobalHighlight()
+    for _, hl in pairs(highlights) do
+        if hl.Adornee == target then
+            hl.FillColor = Color3.fromRGB(0, 255, 0)
+            hl.OutlineColor = Color3.fromRGB(0, 255, 0)
+        else
+            hl.FillColor = Color3.fromRGB(255, 0, 0)
+            hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+        end
+    end
+end
+
+-- Aggiorna gli highlights globali quando un giocatore entra, esce o muore
+local function refreshGlobalHighlights()
+    if #highlights > 0 then
+        activateGlobalHighlight()
+    end
+end
+
+game.Players.PlayerAdded:Connect(refreshGlobalHighlights)
+game.Players.PlayerRemoving:Connect(refreshGlobalHighlights)
+player.CharacterAdded:Connect(refreshGlobalHighlights)
+
+-- Traccia il bersaglio
+runService.RenderStepped:Connect(function()
+    if target then
+        local targetPosition = target:FindFirstChild("HumanoidRootPart").Position
+        camera.CFrame = CFrame.new(camera.CFrame.Position, targetPosition)
+        updateGlobalHighlight()
+    end
+end)
+
+-- Eventi dei pulsanti
+buttonLock.MouseButton1Click:Connect(function()
+    local targetCharacter = findClosestTarget()
+    if targetCharacter then
+        target = targetCharacter
+        showNotification("Ho agganciato il bersaglio più vicino.")
+        updateGlobalHighlight()
+    else
+        showNotification("Nessun bersaglio da agganciare.")
+    end
+end)
+
+buttonDisable.MouseButton1Click:Connect(function()
+    target = nil
+    if highlight then highlight:Destroy() end
+    highlight = nil
+    showNotification("Gancio disattivato.")
+    updateGlobalHighlight()
+end)
+
+buttonESP.MouseButton1Click:Connect(function()
+    if target then
+        activateESP(target)
+        showNotification("ESP attivato sul bersaglio.")
+    else
+        showNotification("Nessun bersaglio per ESP.")
+    end
+end)
+
+buttonHighlight.MouseButton1Click:Connect(function()
+    if #highlights == 0 then
+        activateGlobalHighlight()
+        showNotification("Highlight globale attivato.")
+    else
+        deactivateGlobalHighlight()
+        showNotification("Highlight globale disattivato.")
+    end
+end)
+
+-- Eventi tasti
+userInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.T then -- Aggancia bersaglio
+        local targetCharacter = findClosestTarget()
+        if targetCharacter then
+            target = targetCharacter
+            showNotification("Ho agganciato il bersaglio più vicino.")
+            updateGlobalHighlight()
+        else
+            showNotification("Nessun bersaglio da agganciare.")
+        end
+    elseif input.KeyCode == Enum.KeyCode.E then -- Sgancia bersaglio
+        target = nil
+        if highlight then highlight:Destroy() end
+        highlight = nil
+        showNotification("Gancio disattivato.")
+        updateGlobalHighlight()
+    elseif input.KeyCode == Enum.KeyCode.F then -- Attiva ESP
+        if target then
+            activateESP(target)
+            showNotification("ESP attivato sul bersaglio.")
+        else
+            showNotification("Nessun bersaglio per ESP.")
+        end
+    elseif input.KeyCode == Enum.KeyCode.H then -- Attiva/Disattiva Highlight globale
+        if #highlights == 0 then
+            activateGlobalHighlight()
+            showNotification("Highlight globale attivato.")
+        else
+            deactivateGlobalHighlight()
+            showNotification("Highlight globale disattivato.")
+        end
+    elseif input.KeyCode == Enum.KeyCode.V then -- Toggle visibilità della GUI senza animazione
+        guiVisible = not guiVisible
+        if guiVisible then
+            gui.Enabled = true
+            mainFrame.Position = UDim2.new(0, 10, 0, 10)
+        else
+            gui.Enabled = false
+        end
+        showNotification(guiVisible and "GUI mostrata" or "GUI nascosta")
+    end
+end)
+
+
+-- Abilitare il movimento della GUI
+local dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragInput = input
+        dragStart = input.Position
+        startPos = mainFrame.Position
+
+        input.Changed:Connect(function()
+            if dragInput.UserInputState == Enum.UserInputState.End then
+                dragInput = nil
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if dragInput and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+
+
+-- Funzione per teletrasportarsi al torso del target
+local function teleportToTarget()
+    if target then
+        -- Trova il Humanoid del target
+        local targetHumanoid = target:FindFirstChild("Humanoid")
+        if targetHumanoid then
+            -- Prova a trovare il UpperTorso, altrimenti usa il LowerTorso o Torso
+            local torso = target:FindFirstChild("UpperTorso") or target:FindFirstChild("LowerTorso") or target:FindFirstChild("Torso")
+            if torso then
+                -- Teletrasporta il giocatore alla posizione del torso
+                player.Character:MoveTo(torso.Position)
+                showNotification("Teletrasportato al torso del bersaglio.")
+            else
+                showNotification("Il bersaglio non ha un torso valido per il teletrasporto.")
+            end
+        else
+            showNotification("Il bersaglio non ha un Humanoid valido per il teletrasporto.")
+        end
+    else
+        showNotification("Nessun bersaglio selezionato.")
+    end
+end
+
+
+-- Evento per il pulsante GoTo
+buttonGoto.MouseButton1Click:Connect(function()
+    teleportToTarget()
+end)
+
+-- Evento per il tasto K (teletrasportarsi al target)
+userInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end  -- Ignora se l'input è già stato processato dal gioco
+
+    if input.KeyCode == Enum.KeyCode.K then  -- Tasto K
+        teleportToTarget()  -- Teletrasporta al target
+    end
+end)

@@ -108,7 +108,7 @@ local function followPlayer(playerName)
                 local offset = movements[index]
                 localPlayer.Character:MoveTo(targetPosition + offset)
                 index = index % #movements + 1 -- Ruota tra i movimenti
-                wait(0.1)
+                wait(0)
             end
         end)
     else

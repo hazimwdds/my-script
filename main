@@ -89,12 +89,33 @@ local function followPlayer(playerName)
 
         spawn(function()
             local movements = {
-                Vector3.new(5, 0, 0),  -- Destra
-                Vector3.new(-5, 0, 0), -- Sinistra
-                Vector3.new(0, 5, 0),  -- Sopra
-                Vector3.new(0, -5, 0), -- Sotto
-                Vector3.new(0, 0, 5),  -- Avanti
-                Vector3.new(0, 0, -5)  -- Dietro
+    Vector3.new(5, 0, 0),   -- Destra
+    Vector3.new(-5, 0, 0),  -- Sinistra
+    Vector3.new(0, 5, 0),   -- Sopra
+    Vector3.new(0, -5, 0),  -- Sotto
+    Vector3.new(0, 0, 5),   -- Avanti
+    Vector3.new(0, 0, -5),  -- Dietro
+    Vector3.new(5, 5, 0),   -- Destra + Sopra
+    Vector3.new(5, -5, 0),  -- Destra + Sotto
+    Vector3.new(-5, 5, 0),  -- Sinistra + Sopra
+    Vector3.new(-5, -5, 0), -- Sinistra + Sotto
+    Vector3.new(5, 0, 5),   -- Destra + Avanti
+    Vector3.new(5, 0, -5),  -- Destra + Dietro
+    Vector3.new(-5, 0, 5),  -- Sinistra + Avanti
+    Vector3.new(-5, 0, -5), -- Sinistra + Dietro
+    Vector3.new(0, 5, 5),   -- Sopra + Avanti
+    Vector3.new(0, 5, -5),  -- Sopra + Dietro
+    Vector3.new(0, -5, 5),  -- Sotto + Avanti
+    Vector3.new(0, -5, -5), -- Sotto + Dietro
+    Vector3.new(5, 5, 5),   -- Destra + Sopra + Avanti
+    Vector3.new(5, 5, -5),  -- Destra + Sopra + Dietro
+    Vector3.new(5, -5, 5),  -- Destra + Sotto + Avanti
+    Vector3.new(5, -5, -5), -- Destra + Sotto + Dietro
+    Vector3.new(-5, 5, 5),  -- Sinistra + Sopra + Avanti
+    Vector3.new(-5, 5, -5), -- Sinistra + Sopra + Dietro
+    Vector3.new(-5, -5, 5), -- Sinistra + Sotto + Avanti
+    Vector3.new(-5, -5, -5) -- Sinistra + Sotto + Dietro
+
             }
 
             local index = 1

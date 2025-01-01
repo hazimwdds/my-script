@@ -78,6 +78,18 @@ local function lookAtPlayer(playerName)
     end
 end
 
+-- Funzione per mescolare un array
+local function shuffleArray(array)
+    local shuffled = {}
+    for i = 1, #array do
+        local randomIndex = math.random(1, i)
+        shuffled[i] = shuffled[randomIndex]
+        shuffled[randomIndex] = array[i]
+    end
+    return shuffled
+end
+
+-- Funzione per seguire un giocatore
 local function followPlayer(playerName)
     local localPlayer = game.Players.LocalPlayer
     local targetPlayer = game.Players:FindFirstChild(playerName)
@@ -215,6 +227,10 @@ local function followPlayer(playerName)
     Vector3.new(5, 5, 5)
             }
 
+            -- Mescolare i movimenti
+            local shuffledMovements = shuffleArray(movements)
+
+            local index = 1
             while isFollowing and currentTarget do
                 if not currentTarget.Character or not localPlayer.Character then
                     isFollowing = false
@@ -222,15 +238,17 @@ local function followPlayer(playerName)
                 end
 
                 local targetPosition = currentTarget.Character.PrimaryPart.Position
-                local randomOffset = movements[math.random(1, #movements)] -- Seleziona un movimento casuale
-                localPlayer.Character:MoveTo(targetPosition + randomOffset)
-                wait(0) -- Puoi regolare la velocità
+                local offset = shuffledMovements[index]
+                localPlayer.Character:MoveTo(targetPosition + offset)
+                index = index % #shuffledMovements + 1 -- Ruota tra i movimenti mescolati
+                wait(0)
             end
         end)
     else
         warn("Giocatore non trovato!")
     end
 end
+
 
 
 -- Funzione per bloccare la visuale su un giocatore

@@ -224,7 +224,7 @@ local function followPlayer(playerName)
                 local targetPosition = currentTarget.Character.PrimaryPart.Position
                 local randomOffset = movements[math.random(1, #movements)] -- Seleziona un movimento casuale
                 localPlayer.Character:MoveTo(targetPosition + randomOffset)
-                wait(0.1) -- Puoi regolare la velocità
+                wait(0) -- Puoi regolare la velocità
             end
         end)
     else

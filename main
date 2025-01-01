@@ -78,7 +78,6 @@ local function lookAtPlayer(playerName)
     end
 end
 
--- Funzione per seguire un giocatore
 local function followPlayer(playerName)
     local localPlayer = game.Players.LocalPlayer
     local targetPlayer = game.Players:FindFirstChild(playerName)
@@ -88,9 +87,8 @@ local function followPlayer(playerName)
         currentTarget = targetPlayer
 
         spawn(function()
-
             local movements = {
-    Vector3.new(1, 1, 1),
+                Vector3.new(1, 1, 1),
     Vector3.new(1, 1, 2),
     Vector3.new(1, 1, 3),
     Vector3.new(1, 1, 4),
@@ -215,10 +213,8 @@ local function followPlayer(playerName)
     Vector3.new(5, 5, 3),
     Vector3.new(5, 5, 4),
     Vector3.new(5, 5, 5)
-}
+            }
 
-
-            local index = 1
             while isFollowing and currentTarget do
                 if not currentTarget.Character or not localPlayer.Character then
                     isFollowing = false
@@ -226,16 +222,16 @@ local function followPlayer(playerName)
                 end
 
                 local targetPosition = currentTarget.Character.PrimaryPart.Position
-                local offset = movements[index]
-                localPlayer.Character:MoveTo(targetPosition + offset)
-                index = index % #movements + 1 -- Ruota tra i movimenti
-                wait(0)
+                local randomOffset = movements[math.random(1, #movements)] -- Seleziona un movimento casuale
+                localPlayer.Character:MoveTo(targetPosition + randomOffset)
+                wait(0.1) -- Puoi regolare la velocità
             end
         end)
     else
         warn("Giocatore non trovato!")
     end
 end
+
 
 -- Funzione per bloccare la visuale su un giocatore
 local function lockOnPlayer(playerName)

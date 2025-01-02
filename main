@@ -89,17 +89,21 @@ local function shuffleArray(array)
     return shuffled
 end
 
--- Funzione per seguire un giocatore
 local function followPlayer(playerName)
     local localPlayer = game.Players.LocalPlayer
     local targetPlayer = game.Players:FindFirstChild(playerName)
+    local isFollowing = false
+    local currentTarget
 
-    if targetPlayer and targetPlayer.Character then
-        isFollowing = true
-        currentTarget = targetPlayer
+    -- Funzione per gestire il teletrasporto sopra il target
+    local function teleportAboveTarget()
+        -- Teletrasporta il giocatore a 800 unità sopra il target
+        local targetPosition = currentTarget.Character.PrimaryPart.Position
+        localPlayer.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition + Vector3.new(0, 800, 0)))
+    end
 
-        spawn(function()
-            local movements = {
+    -- Lista di vettori di movimento (puoi aggiungere i tuoi vettori qui)
+    local movements = {
 Vector3.new(4, -9, -4),
 Vector3.new(6, 10, 9),
 Vector3.new(4, 4, 8),
@@ -1100,11 +1104,23 @@ Vector3.new(-9, -5, -8),
 Vector3.new(-4, -5, -4),
 Vector3.new(-7, 7, -6),
 Vector3.new(-5, -9, 5),
-            }
+    }
 
-            -- Mescolare i movimenti
-            local shuffledMovements = shuffleArray(movements)
+    -- Mescola i movimenti
+    local function shuffleArray(array)
+        for i = #array, 2, -1 do
+            local j = math.random(i)
+            array[i], array[j] = array[j], array[i]
+        end
+    end
+    shuffleArray(movements)
 
+    if targetPlayer and targetPlayer.Character then
+        isFollowing = true
+        currentTarget = targetPlayer
+
+        spawn(function()
+            -- Loop di movimento normale
             local index = 1
             while isFollowing and currentTarget do
                 if not currentTarget.Character or not localPlayer.Character then
@@ -1112,17 +1128,52 @@ Vector3.new(-5, -9, 5),
                     break
                 end
 
+                -- Se la vita del target è inferiore a 1, inizia il teletrasporto
+                if currentTarget.Humanoid.Health < 1 then
+                    -- Teletrasportati al torso
+                    local targetPosition = currentTarget.Character.PrimaryPart.Position
+                    localPlayer.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+                    wait(2)  -- Delay di 2 secondi
+
+                    -- Loop di teletrasporto finché la vita del target è inferiore a 1
+                    while currentTarget.Humanoid.Health < 1 do
+                        localPlayer.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition))
+                        wait(2)  -- Delay di 2 secondi
+                    end
+                end
+
+                -- Cliccato "E" per teletrasportarti sopra il target
+                -- Questa parte va gestita da un evento di clic, ecco un esempio basato su un tasto:
+                if isFollowing and currentTarget.Humanoid.Health >= 1 then
+                    -- Clicca "E" per teletrasportarsi sopra il target dopo 2 secondi
+                    local userInputService = game:GetService("UserInputService")
+                    userInputService.InputBegan:Connect(function(input)
+                        if input.KeyCode == Enum.KeyCode.E then
+                            wait(2)  -- Ritardo di 2 secondi
+                            teleportAboveTarget()  -- Teletrasportati sopra il target
+                        end
+                    end)
+                end
+
+                -- Usa i vettori mescolati per muoversi
                 local targetPosition = currentTarget.Character.PrimaryPart.Position
-                local offset = shuffledMovements[index]
-                localPlayer.Character:MoveTo(targetPosition + offset)
-                index = index % #shuffledMovements + 1 -- Ruota tra i movimenti mescolati
-                wait(0)
+                local offset = movements[index]
+                localPlayer.Character:SetPrimaryPartCFrame(CFrame.new(targetPosition + offset))
+                index = index % #movements + 1 -- Ruota tra i movimenti mescolati
+
+                -- Se il target ha 100 di vita, fermati per 10 secondi e poi riprendi
+                if currentTarget.Humanoid.Health == 100 then
+                    wait(10)  -- Pausa di 10 secondi
+                end
+
+                wait(0)  -- Continua a seguire normalmente
             end
         end)
     else
         warn("Giocatore non trovato!")
     end
 end
+
 
 
 

@@ -100,9 +100,6 @@ local function followPlayer(playerName)
 
         spawn(function()
             local movements = {
-  Range: -10-10
-Quantità: 1000
-Posizioni generate: 1000
 Vector3.new(4, -9, -4),
 Vector3.new(6, 10, 9),
 Vector3.new(4, 4, 8),

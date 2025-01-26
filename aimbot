@@ -194,23 +194,33 @@ local function findClosestTarget()
     local predictionTime = 1 -- Tempo di prediction in secondi
 
     for _, otherPlayer in pairs(game.Players:GetPlayers()) do
-        if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") and otherPlayer ~= player then
-            if textboxTarget ~= "" then
-                if otherPlayer.Name == textboxTarget then
-                    if isTargetValid(otherPlayer.Character) then
-                        return otherPlayer.Character
-                    end
+    if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") and otherPlayer ~= player then
+        if textboxTarget ~= "" then
+            if otherPlayer.Name == textboxTarget then
+                if isTargetValid(otherPlayer.Character) then
+                    return otherPlayer.Character
                 end
-            elseif not table.find(whitelist, otherPlayer.Name) then
-                local predictedPosition = predictPosition(otherPlayer.Character, predictionTime)
-                local distance = (predictedPosition - player.Character.HumanoidRootPart.Position).Magnitude
-                if distance < closestDistance and isTargetValid(otherPlayer.Character) then
-                    closestDistance = distance
-                    closestPlayer = otherPlayer
-                end
+            end
+        elseif not table.find(whitelist, otherPlayer.Name) then
+            local predictedPosition = predictPosition(otherPlayer.Character, predictionTime)
+            -- Calcola la posizione del mouse
+            local mousePosition = player:GetMouse().Hit.p
+            -- Calcola la distanza tra il mouse e il giocatore
+            local distance = (mousePosition - predictedPosition).Magnitude
+            if distance < closestDistance and isTargetValid(otherPlayer.Character) then
+                closestDistance = distance
+                closestPlayer = otherPlayer
             end
         end
     end
+end
+
+if closestPlayer then
+    return closestPlayer.Character
+else
+    return nil
+end
+
 
     if closestPlayer then
         return closestPlayer.Character

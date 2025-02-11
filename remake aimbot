@@ -4,8 +4,13 @@ if getgenv().key == getgenv().CorrectKey then
     -- Se la chiave è corretta, esegui il codice principale
     print("Accesso consentito! Caricamento del codice...")
 
-    getgenv().SilentKeyy = 'q'
-getgenv().PredictionAmmount = 0.137
+--// Lock Normal
+getgenv().AimlockKey = "q"
+getgenv().AimRadius = 50
+getgenv().ThirdPerson = true 
+getgenv().FirstPerson = true
+getgenv().PredictionVelocity = 14
+getgenv().PredictionAmmount = 0.032
 
 --// Main Libarys \\--
 local libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/imagoodpersond/puppyware/main/lib"))()
@@ -158,7 +163,7 @@ local VisualTab = Window:page({name = "Visauls"})
 local MiscTab = Window:page({name = "Misc"})
 
 local TargetSection = Window:page({name = "Target"})
-local 
+
 -- Crea la pagina per i teletrasporti
 local Teleports = Window:page({name = "Teleports"})
 
@@ -252,69 +257,73 @@ local VisualMainSection = VisualTab:section({name = "Main",side = "left", size =
 local MiscMoveSettings = MiscTab:section({name = "Movement Cheats",side = "left", size = 200})
 local MiscToolSettings = MiscTab:section({name = "Tool Cheats",side = "left", size = 50})
 local MiscCharSettings = MiscTab:section({name = "Character Cheats",side = "left", size = 50})
-local MiscNorSettings = MiscTab:section({name = "other cheats",side = "left", size = 100})
-MiscNorSettings:button({name = "spy chat", def = false, callback = function(Boolean)
---This script reveals ALL hidden messages in the default chat
+local MiscNorSettings = MiscTab:section({name = "Normal Cheats",side = "left", size = 130})
 
-enabled = true --chat "/spy" to toggle!
-spyOnMyself = false --if true will check your messages too
-public = false --if true will chat the logs publicly (fun, risky)
-publicItalics = true --if true will use /me to stand out
-privateProperties = { --customize private logs
-    Color = Color3.fromRGB(255, 0, 191); 
-    Font = Enum.Font.SourceSansItalic;
-    TextSize = 18.5;
-}
---////////////////////////////////////////////////////////////////
-local StarterGui = game:GetService("StarterGui")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local saymsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest")
-local getmsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("OnMessageDoneFiltering")
-local instance = (_G.chatSpyInstance or 0) + 1
-_G.chatSpyInstance = instance
+MiscNorSettings:button({name = "Spy Chat", callback = function()
+    print("Spy Chat attivato!")
+    local enabled = true
+    local spyOnMyself = false
+    local public = false
+    local publicItalics = true
+    local privateProperties = {
+        Color = Color3.fromRGB(255, 0, 191),
+        Font = Enum.Font.SourceSansItalic,
+        TextSize = 18.5
+    }
+    
+    local StarterGui = game:GetService("StarterGui")
+    local Players = game:GetService("Players")
+    local player = Players.LocalPlayer
+    local saymsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("SayMessageRequest")
+    local getmsg = game:GetService("ReplicatedStorage"):WaitForChild("DefaultChatSystemChatEvents"):WaitForChild("OnMessageDoneFiltering")
+    local instance = (_G.chatSpyInstance or 0) + 1
+    _G.chatSpyInstance = instance
+    
+    local function onChatted(p, msg)
+        if _G.chatSpyInstance == instance then
+            if p == player and msg:lower():sub(1,4) == "/spy" then
+                enabled = not enabled
+                wait(0.3)
+                privateProperties.Text = "{SPY " .. (enabled and "EN" or "DIS") .. "ABLED}"
+                StarterGui:SetCore("ChatMakeSystemMessage", privateProperties)
+            elseif enabled and (spyOnMyself == false or p ~= player) then
+                msg = msg:gsub("[\n\r]", ''):gsub("\t", ' '):gsub("[ ]+", ' ')
+                local hidden = true
+                local conn = getmsg.OnClientEvent:Connect(function(packet, channel)
+                    if packet.SpeakerUserId == p.UserId and packet.Message == msg:sub(#msg - #packet.Message + 1) and 
+                        (channel == "All" or (channel == "Team" and public == false and Players[packet.FromSpeaker].Team == player.Team)) then
+                        hidden = false
+                    end
+                end)
+                wait(1)
+                conn:Disconnect()
+                if hidden and enabled then
+                    if public then
+                        saymsg:FireServer((publicItalics and "/me " or '') .. "{SPY} [" .. p.Name .. "]: " .. msg, "All")
+                    else
+                        privateProperties.Text = "{SPY} [" .. p.Name .. "]: " .. msg
+                        StarterGui:SetCore("ChatMakeSystemMessage", privateProperties)
+                    end
+                end
+            end
+        end
+    end
+    
+    for _, p in ipairs(Players:GetPlayers()) do
+        p.Chatted:Connect(function(msg) onChatted(p, msg) end)
+    end
+    Players.PlayerAdded:Connect(function(p)
+        p.Chatted:Connect(function(msg) onChatted(p, msg) end)
+    end)
+    privateProperties.Text = "{SPY " .. (enabled and "EN" or "DIS") .. "ABLED}"
+    StarterGui:SetCore("ChatMakeSystemMessage", privateProperties)
+    local chatFrame = player.PlayerGui.Chat.Frame
+    chatFrame.ChatChannelParentFrame.Visible = true
+    chatFrame.ChatBarParentFrame.Position = chatFrame.ChatChannelParentFrame.Position + UDim2.new(UDim.new(), chatFrame.ChatChannelParentFrame.Size.Y)
+end})
 
-local function onChatted(p,msg)
-	if _G.chatSpyInstance == instance then
-		if p==player and msg:lower():sub(1,4)=="/spy" then
-			enabled = not enabled
-			wait(0.3)
-			privateProperties.Text = "{SPY "..(enabled and "EN" or "DIS").."ABLED}"
-			StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
-		elseif enabled and (spyOnMyself==false or p~=player) then
-			msg = msg:gsub("[\n\r]",''):gsub("\t",' '):gsub("[ ]+",' ')
-			local hidden = true
-			local conn = getmsg.OnClientEvent:Connect(function(packet,channel)
-				if packet.SpeakerUserId==p.UserId and packet.Message==msg:sub(#msg-#packet.Message+1) and (channel=="All" or (channel=="Team" and public==false and Players[packet.FromSpeaker].Team==player.Team)) then
-					hidden = false
-				end
-			end)
-			wait(1)
-			conn:Disconnect()
-			if hidden and enabled then
-				if public then
-					saymsg:FireServer((publicItalics and "/me " or '').."{SPY} [".. p.Name .."]: "..msg,"All")
-				else
-					privateProperties.Text = "{SPY} [".. p.Name .."]: "..msg
-					StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
-				end
-			end
-		end
-	end
-end
-
-for _,p in ipairs(Players:GetPlayers()) do
-	p.Chatted:Connect(function(msg) onChatted(p,msg) end)
-end
-Players.PlayerAdded:Connect(function(p)
-	p.Chatted:Connect(function(msg) onChatted(p,msg) end)
-end)
-privateProperties.Text = "{SPY "..(enabled and "EN" or "DIS").."ABLED}"
-StarterGui:SetCore("ChatMakeSystemMessage",privateProperties)
-local chatFrame = player.PlayerGui.Chat.Frame
-chatFrame.ChatChannelParentFrame.Visible = true
-chatFrame.ChatBarParentFrame.Position = chatFrame.ChatChannelParentFrame.Position+UDim2.new(UDim.new(),chatFrame.ChatChannelParentFrame.Size.Y)
-MiscNorSettings:button({name = "pack animation", def = false, callback = function(Boolean)
+MiscNorSettings:button({name = "Animation Pack", callback = function()
+    print("Animation Pack attivato!")
 repeat
     wait()
 until game:IsLoaded() and game.Players.LocalPlayer.Character:FindFirstChild("FULLY_LOADED_CHAR") and game.Players.LocalPlayer.PlayerGui.MainScreenGui:FindFirstChild("AnimationPack") and game.Players.LocalPlayer.PlayerGui.MainScreenGui:FindFirstChild("AnimationPlusPack")
@@ -700,26 +709,66 @@ function AnimationPack(Character)
 end
 AnimationPack(game.Players.LocalPlayer.Character)
 game.Players.LocalPlayer.CharacterAdded:Connect(AnimationPack)
-MiscNorSettings:button({name = "zombie animation", def = false, callback = function(Boolean)
-while true do
-wait(5)
-local Animate = game.Players.LocalPlayer.Character.Animate
-Animate.idle.Animation1.AnimationId = "http://www.roblox.com/asset/?id=782841498"
-Animate.idle.Animation2.AnimationId = "http://www.roblox.com/asset/?id=782841498"
-Animate.walk.WalkAnim.AnimationId = "http://www.roblox.com/asset/?id=616168032"
-Animate.run.RunAnim.AnimationId = "http://www.roblox.com/asset/?id=616163682"
-Animate.jump.JumpAnim.AnimationId = "http://www.roblox.com/asset/?id=1083218792"
-Animate.climb.ClimbAnim.AnimationId = "http://www.roblox.com/asset/?id=1083439238"
-Animate.fall.FallAnim.AnimationId = "http://www.roblox.com/asset/?id=707829716"
-game.Players.LocalPlayer.Character.Humanoid.Jump = false
-wait(5)
- game.StarterGui:SetCore("SendNotification", {
-        Title = "Info",  
-        Text = "some time when the animation dont work re click the button",  
-        Duration = 20  
+end})
+
+MiscNorSettings:button({name = "Zombie", callback = function()
+    print("Modalità Zombie attivata!")
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Info",
+        Text = "When you respawn if the animation don't work try to reclick the button sorry for the inconvenience",
+        Duration = 20
     })
+    
+    while true do
+        wait(5)
+        local Animate = game.Players.LocalPlayer.Character.Animate
+        Animate.idle.Animation1.AnimationId = "http://www.roblox.com/asset/?id=782841498"
+        Animate.idle.Animation2.AnimationId = "http://www.roblox.com/asset/?id=782841498"
+        Animate.walk.WalkAnim.AnimationId = "http://www.roblox.com/asset/?id=616168032"
+        Animate.run.RunAnim.AnimationId = "http://www.roblox.com/asset/?id=616163682"
+        Animate.jump.JumpAnim.AnimationId = "http://www.roblox.com/asset/?id=1083218792"
+        Animate.climb.ClimbAnim.AnimationId = "http://www.roblox.com/asset/?id=1083439238"
+        Animate.fall.FallAnim.AnimationId = "http://www.roblox.com/asset/?id=707829716"
+        game.Players.LocalPlayer.Character.Humanoid.Jump = false
+        wait(1)
+    end
+end})
+
+MiscNorSettings:button({name = "auto redeem code", callback = function()
+local codes = {
+    "ShortCake", 
+    "Beary ",
+    "SHRIMP",
+    "VIP",
+    "2025",
+    "THANKSGIVING24",
+    "DACARNIVAL",
+    "HALLOWEEN2024",
+    "RUBY",
+    "pumpkins2023",
+    "TRADEME!",
+    "DAUP"
+}
+
+local function redeemCode(code)
+    local args = {
+        [1] = code
+    }
+    local success, errorMsg = pcall(function()
+        game:GetService("ReplicatedStorage").MainEvent:FireServer("EnterPromoCode", unpack(args))
+    end)
+    if success then
+        print("Codice riscattato: " .. code)
+    else
+        print("Errore con il codice: " .. code .. " - " .. errorMsg)
+    end
 end
+
+for _, code in ipairs(codes) do
+    redeemCode(code)
+    wait(5) -- Aumenta l'attesa se necessario
 end
+end})
 
 local ConfigSection = MiscTab:section({name = "Config",side = "right", size = 250})
 local ConfigLoader = ConfigSection:configloader({folder = "puppywarereborn"})
@@ -990,12 +1039,7 @@ AimingTab:openpage()
 
 -- Init --
 
---// Lock Normal
-getgenv().AimlockKey = "t"
-getgenv().AimRadius = 50
-getgenv().ThirdPerson = true 
-getgenv().FirstPerson = true
-getgenv().PredictionVelocity = 11
+
 
 local Players, Uis, RService, SGui = game:GetService"Players", game:GetService"UserInputService", game:GetService"RunService", game:GetService"StarterGui";
 local Client, Mouse, Camera, CF, RNew, Vec3, Vec2 = Players.LocalPlayer, Players.LocalPlayer:GetMouse(), workspace.CurrentCamera, CFrame.new, Ray.new, Vector3.new, Vector2.new;
@@ -1623,7 +1667,7 @@ VisualMainSection:toggle({name = "ESP Enabled", def = false, callback = function
         deactivateGlobalHighlight()
     end
 end})
-
+    
 else
     -- Se la chiave è errata, mostra un messaggio di errore
     game.StarterGui:SetCore("SendNotification", {

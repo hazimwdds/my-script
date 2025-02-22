@@ -13,7 +13,7 @@ getgenv().PredictionVelocity = 14
 getgenv().PredictionAmmount = 0.032
 
 --// Main Libarys \\--
-local libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/imagoodpersond/puppyware/main/lib"))()
+local libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/hazimwdds/my-script/refs/heads/main/test"))()
 local NotifyLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/imagoodpersond/puppyware/main/notify"))()
 local Notify = NotifyLibrary.Notify
 --// Service Handler \\--

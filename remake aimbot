@@ -10,7 +10,7 @@ getgenv().AimRadius = 50
 getgenv().ThirdPerson = true 
 getgenv().FirstPerson = true
 getgenv().PredictionVelocity = 14
-getgenv().PredictionAmmount = 0.032
+
 
 --// Main Libarys \\--
 local libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/hazimwdds/my-script/refs/heads/main/test"))()

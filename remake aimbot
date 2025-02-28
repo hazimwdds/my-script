@@ -775,16 +775,6 @@ local ConfigLoader = ConfigSection:configloader({folder = "puppywarereborn"})
 
 
 
-local TargetName = ""
-local function getClosestMatchingName(input)
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player.Name:lower():sub(1, #input) == input:lower() then
-            return player.Name
-        end
-    end
-    return input
-end
-
 
 
 

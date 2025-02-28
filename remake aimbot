@@ -162,7 +162,7 @@ local RageTab = Window:page({name = "Rage"})
 local VisualTab = Window:page({name = "Visauls"})
 local MiscTab = Window:page({name = "Misc"})
 
-local TargetSection = Window:page({name = "Target"})
+
 
 -- Crea la pagina per i teletrasporti
 local Teleports = Window:page({name = "Teleports"})
@@ -773,8 +773,7 @@ end})
 local ConfigSection = MiscTab:section({name = "Config",side = "right", size = 250})
 local ConfigLoader = ConfigSection:configloader({folder = "puppywarereborn"})
 
---// Target Section
-local TargetSection = TargetSection:section({name = "Target", side = "right", size = 200})
+
 
 local TargetName = ""
 local function getClosestMatchingName(input)
@@ -786,29 +785,7 @@ local function getClosestMatchingName(input)
     return input
 end
 
-local TargetTextBox = TargetSection:textbox({name = "Target Name", def = "", callback = function(value)
-    TargetName = getClosestMatchingName(value)
-end})
 
-TargetSection:button({name = "Goto", callback = function()
-    local targetPlayer = game.Players:FindFirstChild(TargetName)
-    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = targetPlayer.Character.HumanoidRootPart.CFrame
-    end
-end})
-
-local viewing = false
-TargetSection:toggle({name = "View", def = false, callback = function(state)
-    viewing = state
-    if viewing then
-        local targetPlayer = game.Players:FindFirstChild(TargetName)
-        if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
-            workspace.CurrentCamera.CameraSubject = targetPlayer.Character.Humanoid
-        end
-    else
-        workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
-    end
-end})
 
 
 -- Aimbot Section --

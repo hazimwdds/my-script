@@ -11,7 +11,6 @@ getgenv().ThirdPerson = true
 getgenv().FirstPerson = true
 getgenv().PredictionVelocity = 14
 
-
 --// Main Libarys \\--
 local libary = loadstring(game:HttpGet("https://raw.githubusercontent.com/hazimwdds/my-script/refs/heads/main/test"))()
 local NotifyLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/imagoodpersond/puppyware/main/notify"))()
@@ -162,7 +161,7 @@ local RageTab = Window:page({name = "Rage"})
 local VisualTab = Window:page({name = "Visauls"})
 local MiscTab = Window:page({name = "Misc"})
 
-
+local TargetSection = Window:page({name = "Target"})
 
 -- Crea la pagina per i teletrasporti
 local Teleports = Window:page({name = "Teleports"})
@@ -775,9 +774,6 @@ local ConfigLoader = ConfigSection:configloader({folder = "puppywarereborn"})
 
 
 
-
-
-
 -- Aimbot Section --
 local AimbotSection = AimingTab:section({name = "AimBot", side = "right",size = 113})
 AimbotSection:toggle({name = "Aimbot Enabled", def = false, callback = function(Boolean)
@@ -810,7 +806,7 @@ AimbotSettings:slider({name = "Smoothness Ammount", def = 2, max = 10, min = 1, 
     PuppySettings.AimbotSettings.SmoothnessAmmount = Value
 end})
 
-AimbotSettings:slider({name = "Prediction Velocity", def = 10, max = 100, min = 2, rounding = true, callback = function(Value)
+AimbotSettings:slider({name = "Prediction Velocity", def = 10, max = 60, min = 2, rounding = true, callback = function(Value)
     PuppySettings.AimbotSettings.PredictionVelocity = Value
 end})
 
@@ -1448,45 +1444,7 @@ game:GetService("RunService").Heartbeat:Connect(function()
 		local PingNumber = getgenv().pingValue[1]
 		getgenv().PredictionAmmount = PingNumber / 1000 + getgenv().Prediction
 		print(getgenv().PredictionAmmount)
-	end -- Ping Prediction 1
-	if PuppySettings.SilentAimSettings.PingPred2 and not PuppySettings.SilentAimSettings.PingPred1 and PuppySettings.SilentAim.Enabled then
-		pingvalue = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
-		split = string.split(pingvalue,'(')
-		ping = tonumber(split[1])
-	   if ping < 130 then
-		   PredictionValue = 0.151
-	   elseif ping < 125 then
-		   PredictionValue = 0.149
-	   elseif ping < 110 then
-		   PredictionValue = 0.146
-	   elseif ping < 105 then
-		   PredictionValue = 0.138
-	   elseif ping < 90 then
-		   PredictionValue = 0.136
-	   elseif ping < 80 then
-		   PredictionValue = 0.134
-	   elseif ping < 70 then
-		   PredictionValue = 0.131
-	   elseif ping < 60 then
-		   PredictionValue = 0.1229
-	   elseif ping < 50 then
-		   PredictionValue = 0.1225
-	   elseif ping < 40 then
-		   PredictionValue = 0.1256
-	   end
-	end -- Ping Prediction 2
-	if PuppySettings.SilentAim.ShowFOV then
-		SilentAimFOV.Visible = true
-        SilentAimFOV.Radius = PuppySettings.FOV.SilentAimSize
-        SilentAimFOV.Filled = PuppySettings.FOV.FOVFilled
-        SilentAimFOV.Transparency = PuppySettings.FOV.Transparency
-        SilentAimFOV.NumSides = 100
-        SilentAimFOV.Thickness = PuppySettings.FOV.Thickness
-        SilentAimFOV.Color = PuppySettings.SilentAim.FOVColor
-        SilentAimFOV.Position = Vector2.new(Mouse.X, Mouse.Y + GuiInset.Y)
-    else
-        SilentAimFOV.Visible = false
-    end -- fov
+	end
 	if PuppySettings.TriggerBot.Enabled then
 		for i, v in next, Players:GetPlayers() do 
 			if Alive(v) then 
